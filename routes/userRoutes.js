@@ -4,6 +4,7 @@ const bcryptjs = require('bcryptjs');
 const router = express.Router();
 const jwt = require('jsonwebtoken')
 const auth = require('../middlewares/auth')
+const { OAuth2Client } = require('google-auth-library');
 
 // Register route
 router.post('/register', async (req,res) => {
@@ -46,6 +47,51 @@ router.post('/login', async (req, res) => {
     }
 
 })
+
+// Initialize Google OAuth client with your client ID
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Google Login Route
+router.post('/google-login', async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    // Verify token with Google
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    // Check if user already exists in the database
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // If user does not exist, create a new one
+      user = new User({
+        name,
+        email,
+        password: "", // Password can be empty for Google users
+      });
+      await user.save();
+    }
+
+    // Generate JWT token
+    const jwtToken = jwt.sign({ email: user.email, id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
+
+    res.status(200).json({
+      success: true,
+      user,
+      token: jwtToken,
+      message: `Welcome ${user.name}`,
+    });
+  } catch (error) {
+    console.error("Error in Google login:", error);
+    res.status(500).json({ success: false, message: "Google login failed" });
+  }
+});
 
  // Reset Password Controller
 router.post('/resetpassword', async (req, res) => {
