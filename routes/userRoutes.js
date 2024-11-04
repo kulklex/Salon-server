@@ -5,6 +5,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken')
 const auth = require('../middlewares/auth')
 const { OAuth2Client } = require('google-auth-library');
+const Booking = require('../models/bookingModel');
 
 // Register route
 // router.post('/register', async (req,res) => {
@@ -97,10 +98,10 @@ router.post('/google-login', async (req, res) => {
 // Route to fetch bookings for the logged-in user
 router.get('/user-bookings', auth, async (req, res) => {
   try {
-    const userId = req.user.jti; // User ID from Google `jti`
+    const userId = req.user.email; // User ID from Google `jti`
 
     // Find bookings for this user
-    const bookings = await Booking.find({ userId });
+    const bookings = await Booking.find({ customerEmail:userId });
 
     if (!bookings) {
       return res.status(404).json({ success: false, message: "No bookings found" });
@@ -108,6 +109,7 @@ router.get('/user-bookings', auth, async (req, res) => {
 
     res.status(200).json({ success: true, bookings });
   } catch (error) {
+    console.error(error)
     res.status(500).json({ success: false, message: "Error fetching bookings" });
   }
 });
