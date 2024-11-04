@@ -7,46 +7,46 @@ const auth = require('../middlewares/auth')
 const { OAuth2Client } = require('google-auth-library');
 
 // Register route
-router.post('/register', async (req,res) => {
-    try {
-        const existingUser = await User.findOne({email: req.body.email})
+// router.post('/register', async (req,res) => {
+//     try {
+//         const existingUser = await User.findOne({email: req.body.email})
 
-        if (existingUser) {
-            return res.status(200).send({message: "User Already Exist"})
-        }
-        const email = req.body.email
-        const password = req.body.password
-        const salt = await bcryptjs.genSalt(10)
-        const hashPassword = await bcryptjs.hash(password, salt)
-        req.body.password = hashPassword
-        const user = await User.create(req.body)
-        user.userId = user?._id
-        const token = jwt.sign({ email, id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' })
-        res.status(201).json({ success:true, user, token, message: "User Successfully Created" })
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({success:false, message:`Register Controller: ${error.message}`})
-    }
-})
+//         if (existingUser) {
+//             return res.status(200).send({message: "User Already Exist"})
+//         }
+//         const email = req.body.email
+//         const password = req.body.password
+//         const salt = await bcryptjs.genSalt(10)
+//         const hashPassword = await bcryptjs.hash(password, salt)
+//         req.body.password = hashPassword
+//         const user = await User.create(req.body)
+//         user.userId = user?._id
+//         const token = jwt.sign({ email, id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' })
+//         res.status(201).json({ success:true, user, token, message: "User Successfully Created" })
+//     } catch (error) {
+//         console.log(error)
+//         res.status(500).json({success:false, message:`Register Controller: ${error.message}`})
+//     }
+// })
 
 // Login route
-router.post('/login', async (req, res) => {
-    const {email, password} = req.body
-    try {
-        const existingUser = await User.findOne({ email });
-        if (!existingUser) return res.status(404).json({ message: "Invalid email or password" });
+// router.post('/login', async (req, res) => {
+//     const {email, password} = req.body
+//     try {
+//         const existingUser = await User.findOne({ email });
+//         if (!existingUser) return res.status(404).json({ message: "Invalid email or password" });
 
-        const isPasswordCorrect = await bcryptjs.compare(password, existingUser.password);
-        if (!isPasswordCorrect) return res.status(400).json({ message: "Invalid email or password" });
+//         const isPasswordCorrect = await bcryptjs.compare(password, existingUser.password);
+//         if (!isPasswordCorrect) return res.status(400).json({ message: "Invalid email or password" });
 
-        const token = jwt.sign({email: existingUser.email, id: existingUser._id }, process.env.JWT_SECRET_KEY, {expiresIn: '1h'} )
-        res.status(200).json({success:true, user: existingUser, token, message: `Welcome ${existingUser.name}`})
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({success:false, message:`Login Controller: ${error.message}`})
-    }
+//         const token = jwt.sign({email: existingUser.email, id: existingUser._id }, process.env.JWT_SECRET_KEY, {expiresIn: '1h'} )
+//         res.status(200).json({success:true, user: existingUser, token, message: `Welcome ${existingUser.name}`})
+//     } catch (error) {
+//         console.log(error)
+//         res.status(500).json({success:false, message:`Login Controller: ${error.message}`})
+//     }
 
-})
+// })
 
 // Initialize Google OAuth client with your client ID
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -92,6 +92,35 @@ router.post('/google-login', async (req, res) => {
     res.status(500).json({ success: false, message: "Google login failed" });
   }
 });
+
+
+// Route to fetch bookings for the logged-in user
+router.get('/user-bookings', auth, async (req, res) => {
+  try {
+    const userId = req.user.jti; // User ID from Google `jti`
+
+    // Find bookings for this user
+    const bookings = await Booking.find({ userId });
+
+    if (!bookings) {
+      return res.status(404).json({ success: false, message: "No bookings found" });
+    }
+
+    res.status(200).json({ success: true, bookings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching bookings" });
+  }
+});
+
+
+
+
+
+
+
+
+
+
 
  // Reset Password Controller
 router.post('/resetpassword', async (req, res) => {
