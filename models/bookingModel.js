@@ -19,6 +19,13 @@ const bookingSchema = new mongoose.Schema({
     customerPhone: {
         type: String,
         required: true
+    },
+    selectedStyle: {
+        type: String,
+        required: true
+    }, 
+    bookingNote: {
+        type: String
     }
 });
 
