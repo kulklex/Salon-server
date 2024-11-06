@@ -81,7 +81,6 @@ router.post('/create-booking', async (req, res) => {
       await newBooking.save();
       res.status(201).json({ message: 'Booking confirmed', booking: newBooking });
     } catch (error) {
-        console.error(error)
       if (error.code === 11000) {
         // Handle duplicate key error gracefully
         return res.status(400).json({ message: 'This slot is already booked' });
