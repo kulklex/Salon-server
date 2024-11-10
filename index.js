@@ -24,7 +24,7 @@ app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/auth', userRoutes)
 
 app.get('/', (req, res) => {
-    res.send(`App is running`)
+    res.json({message: 'App is running'})
 })
 
 // Start the server
