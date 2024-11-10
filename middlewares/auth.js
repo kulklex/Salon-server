@@ -1,19 +1,19 @@
-const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const jwt = require("jsonwebtoken");
 
 module.exports = async (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+  // Get the token from the Authorization header
+  const token = req.headers.authorization?.split(" ")[1]; // Expects "Bearer <token>"
+  
+  
   if (!token) return res.status(403).json({ message: "Authorization required" });
 
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-    const payload = ticket.getPayload();
-    req.user = { jti: payload.jti, email: payload.email };
+    // Attach the user data from the token to the request object (e.g., user ID, email)
+    req.user = { id: decoded.id, email: decoded.email };
 
+    // Proceed to the next middleware or route handler
     next();
   } catch (error) {
     res.status(401).json({ message: "Invalid token" });

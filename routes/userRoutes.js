@@ -10,41 +10,49 @@ const Booking = require("../models/bookingModel");
 // Register route
 router.post("/register", async (req, res) => {
   try {
-    const existingUser = await User.findOne({ email: req.body.email });
+    const { name, email, password, confirmPassword } = req.body;
 
-    if (existingUser) {
-      return res.status(200).send({ message: "User Already Exist" });
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
     }
-    const email = req.body.email;
-    const password = req.body.password;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(200).json({ message: "User already exists" });
+    }
+
+    // Hash the password
     const salt = await bcryptjs.genSalt(10);
     const hashPassword = await bcryptjs.hash(password, salt);
-    req.body.password = hashPassword;
-    const user = await User.create(req.body);
+
+    // Create the new user
+    const user = await User.create({ name, email, password: hashPassword });
     user.userId = user?._id;
+
+    // Generate token
     const token = jwt.sign(
       { email, id: user._id },
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
-    res
-      .status(201)
-      .json({
-        success: true,
-        user,
-        token,
-        message: "User Successfully Created",
-      });
+
+    res.status(201).json({
+      success: true,
+      user,
+      token,
+      message: "User successfully created",
+    });
   } catch (error) {
     console.log(error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: `Register Controller: ${error.message}`,
-      });
+    res.status(500).json({
+      success: false,
+      message: `Register Controller: ${error.message}`,
+    });
   }
 });
+
 
 // Login route
 router.post("/login", async (req, res) => {
