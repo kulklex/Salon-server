@@ -3,6 +3,70 @@ const router = express.Router();
 const Booking = require('../models/bookingModel');
 const auth = require('../middlewares/auth'); // Middleware for token verification
 const UnavailableDate = require('../models/UnavailableDates');
+const nodemailer = require('nodemailer');
+
+require('dotenv').config();
+
+// Setup email transporter
+let transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: '587',
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER, 
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+
+// Function to send the booking confirmation email
+async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDetails) {
+  const { date, time, name, service } = bookingDetails;
+
+  // Confirmation email to the customer
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: customerEmail,
+    subject: 'Booking Confirmation',
+    html: `
+      <h2>Booking Confirmed!</h2>
+      <p>Dear ${name},</p>
+      <p>Your booking has been successfully confirmed. Here are the details: </p>
+      <ul>
+        <li><strong>Date:</strong> ${date}</li>
+        <li><strong>Time:</strong> ${time}</li>
+        <li><strong>Service:</strong> ${service}</li>
+      </ul>
+      <p>Thank you for booking with us!</p>
+    `,
+  };
+
+    // Notification email to the admin
+    const adminMailOptions = {
+      from: process.env.EMAIL_USER,
+      to: adminEmail,
+      subject: 'New Booking Notification',
+      html: `
+        <h2>New Booking Received</h2>
+        <p>A new booking has been made. Here are the details: </p>
+        <ul>
+          <li><strong>Customer Name:</strong> ${name}</li>
+          <li><strong>Date:</strong> ${date}</li>
+          <li><strong>Time:</strong> ${time}</li>
+          <li><strong>Service:</strong> ${service}</li>
+        </ul>
+        <p>Please check the booking system for more information.</p>
+      `,
+    };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    await transporter.sendMail(adminMailOptions);
+    console.log('Booking confirmation email sent.');
+  } catch (error) {
+    console.error('Error sending booking confirmation email:', error);
+  }
+}
 
 
 // Check Availability
@@ -40,6 +104,14 @@ router.post('/create-booking', async (req, res) => {
       });
   
       await newBooking.save();
+
+      // Call function to send email
+    await sendBookingConfirmationEmail(customerEmail, process.env.ADMIN_EMAIL, {
+      date,
+      time,
+      name: customerName,
+      service: selectedStyle,
+    });
       res.status(201).json({ message: 'Booking confirmed', booking: newBooking });
     } catch (error) {
       if (error.code === 11000) {
@@ -69,11 +141,36 @@ router.post("/admin/set-unavailable-dates", auth, async (req, res) => {
   }
 });
 
-// Get unavailable dates
+// Get unavailable dates and fully booked dates
 router.get("/admin/get-unavailable-dates", async (req, res) => {
   try {
-    const unavailableDates = await UnavailableDate.findOne({}).select("dates");
-    res.status(200).json({ success: true, dates: unavailableDates ? unavailableDates.dates : [] });
+    // Fetch unavailable dates from UnavailableDate model
+    const unavailableDatesDoc = await UnavailableDate.findOne({}).select("dates");
+    const unavailableDates = unavailableDatesDoc ? unavailableDatesDoc.dates : [];
+
+    // Find fully booked dates from bookings where all time slots are booked
+    const bookings = await Booking.aggregate([
+      {
+        $group: {
+          _id: "$date", // Group by date
+          bookedCount: { $sum: 1 } // Count bookings per date
+        }
+      },
+      {
+        $match: { bookedCount: { $gte: 3 } } // Change 3 to the max time slots per day
+      },
+      {
+        $project: { date: "$_id", _id: 0 } // Project the date field for response
+      }
+    ]);
+
+    // Extract fully booked dates
+    const fullyBookedDates = bookings.map((booking) => booking.date);
+
+    // Combine unavailable and fully booked dates
+    const allUnavailableDates = Array.from(new Set([...unavailableDates, ...fullyBookedDates]));
+
+    res.status(200).json({ success: true, dates: allUnavailableDates });
   } catch (error) {
     res.status(500).json({ success: false, message: "Error fetching unavailable dates", error });
   }

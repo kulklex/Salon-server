@@ -140,12 +140,10 @@ router.post("/google-login", async (req, res) => {
 });
 
 // Route to fetch bookings for the logged-in user
-router.get("/user-bookings", auth, async (req, res) => {
+router.get("/user-bookings", async (req, res) => {
   try {
-    const userId = req.user.email; // User ID from Google `jti`
-
     // Find bookings for this user
-    const bookings = await Booking.find({ customerEmail: userId });
+    const bookings = await Booking.find();
 
     if (!bookings) {
       return res

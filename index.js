@@ -23,6 +23,7 @@ connectDB();
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/auth', userRoutes)
 
+// Home Route
 app.get('/', (req, res) => {
     res.json({message: 'App is running'})
 })
