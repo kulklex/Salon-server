@@ -199,13 +199,12 @@ router.post("/admin/remove-unavailable-date", auth, async (req, res) => {
 
 
 // Delete Booking
-router.delete("/delete-booking/:id", auth, async (req, res) => {
+router.delete("/delete-booking/:id", async (req, res) => {
   try {
     const bookingId = req.params.id;
-    const userId = req.user.id;
 
     // Find the booking to delete
-    const booking = await Booking.findOne({ _id: bookingId, userId });
+    const booking = await Booking.findOne({ _id: bookingId});
 
     if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found or access denied" });
