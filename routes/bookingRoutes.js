@@ -23,41 +23,87 @@ let transporter = nodemailer.createTransport({
 async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDetails) {
   const { date, time, name, service } = bookingDetails;
 
-  // Confirmation email to the customer
+  const logoUrl = 'https://yourwebsite.com/logo.png'; // Replace with your logo URL
+  const customerEmailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+      <div style="background-color: #007bff; color: white; padding: 20px; text-align: center;">
+        <img src="${logoUrl}" alt="Company Logo" style="max-width: 120px; margin-bottom: 10px;" />
+        <h1 style="margin: 0; font-size: 24px;">Booking Confirmation</h1>
+      </div>
+      <div style="padding: 20px; background-color: #f9f9f9;">
+        <p style="font-size: 16px; color: #333;">Dear <strong>${name}</strong>,</p>
+        <p style="font-size: 16px; color: #333;">Thank you for booking with us! Here are your booking details:</p>
+        <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Date:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${date}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Time:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${time}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Service:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${service}</td>
+          </tr>
+        </table>
+        <p style="font-size: 16px; color: #333;">We look forward to serving you. If you have any questions, feel free to contact us.</p>
+        <p style="font-size: 16px; color: #333;">Best regards,<br /><strong>Your Company Name</strong></p>
+      </div>
+      <div style="background-color: #007bff; color: white; text-align: center; padding: 10px;">
+        <p style="font-size: 14px; margin: 0;">© ${new Date().getFullYear()} Your Company Name. All Rights Reserved.</p>
+      </div>
+    </div>
+  `;
+
+  const adminEmailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+      <div style="background-color: #ff6f61; color: white; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">New Booking Notification</h1>
+      </div>
+      <div style="padding: 20px; background-color: #f9f9f9;">
+        <p style="font-size: 16px; color: #333;">A new booking has been made with the following details:</p>
+        <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Customer Name:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Date:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${date}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Time:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${time}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Service:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${service}</td>
+          </tr>
+        </table>
+        <p style="font-size: 16px; color: #333;">Please log in to the booking system for more details.</p>
+      </div>
+      <div style="background-color: #ff6f61; color: white; text-align: center; padding: 10px;">
+        <p style="font-size: 14px; margin: 0;">© ${new Date().getFullYear()} Your Company Name. All Rights Reserved.</p>
+      </div>
+    </div>
+  `;
+
+  // Email to the customer
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: customerEmail,
     subject: 'Booking Confirmation',
-    html: `
-      <h2>Booking Confirmed!</h2>
-      <p>Dear ${name},</p>
-      <p>Your booking has been successfully confirmed. Here are the details: </p>
-      <ul>
-        <li><strong>Date:</strong> ${date}</li>
-        <li><strong>Time:</strong> ${time}</li>
-        <li><strong>Service:</strong> ${service}</li>
-      </ul>
-      <p>Thank you for booking with us!</p>
-    `,
+    html: customerEmailHtml,
   };
 
-    // Notification email to the admin
-    const adminMailOptions = {
-      from: process.env.EMAIL_USER,
-      to: adminEmail,
-      subject: 'New Booking Notification',
-      html: `
-        <h2>New Booking Received</h2>
-        <p>A new booking has been made. Here are the details: </p>
-        <ul>
-          <li><strong>Customer Name:</strong> ${name}</li>
-          <li><strong>Date:</strong> ${date}</li>
-          <li><strong>Time:</strong> ${time}</li>
-          <li><strong>Service:</strong> ${service}</li>
-        </ul>
-        <p>Please check the booking system for more information.</p>
-      `,
-    };
+  // Email to the admin
+  const adminMailOptions = {
+    from: process.env.EMAIL_USER,
+    to: adminEmail,
+    subject: 'New Booking Notification',
+    html: adminEmailHtml,
+  };
 
   try {
     await transporter.sendMail(mailOptions);
@@ -67,6 +113,7 @@ async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDe
     console.error('Error sending booking confirmation email:', error);
   }
 }
+
 
 
 // Check Availability
@@ -157,7 +204,7 @@ router.get("/admin/get-unavailable-dates", async (req, res) => {
         }
       },
       {
-        $match: { bookedCount: { $gte: 3 } } // Change 3 to the max time slots per day
+        $match: { bookedCount: { $gte: 5 } } // Change 5 to the max time slots per day
       },
       {
         $project: { date: "$_id", _id: 0 } // Project the date field for response
@@ -199,7 +246,7 @@ router.post("/admin/remove-unavailable-date", auth, async (req, res) => {
 
 
 // Delete Booking
-router.delete("/delete-booking/:id", async (req, res) => {
+router.delete("/admin/delete-booking/:id", async (req, res) => {
   try {
     const bookingId = req.params.id;
 
@@ -217,21 +264,89 @@ router.delete("/delete-booking/:id", async (req, res) => {
   }
 });
 
-// Cancel a booking
-// router.post('/cancel', async (req, res) => {
-//     const { slot, userId } = req.body;
-//     try {
-//         const booking = await Booking.findOne({ slot, userId });
-//         if (!booking) {
-//             return res.status(404).json({ message: 'Booking not found or unauthorized' });
-//         }
 
-//         // Delete the booking
-//         await Booking.deleteOne({ slot, userId });
-//         res.status(200).json({ message: 'Booking canceled successfully' });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error canceling booking' });
-//     }
-// });
+// Remove past unavailable dates
+router.post("/admin/remove-past-unavailable-dates", auth, async (req, res) => {
+  try {
+    // Fetch the document with the unavailable dates
+    const unavailableDatesDoc = await UnavailableDate.findOne({}).select("dates");
+
+    if (!unavailableDatesDoc || !unavailableDatesDoc.dates || unavailableDatesDoc.dates.length === 0) {
+      return res.status(404).json({ success: false, message: "No unavailable dates found" });
+    }
+
+    // Get today's date without time (set time to midnight for accurate comparison)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Filter out dates that are today or later
+    const pastDates = unavailableDatesDoc.dates.filter(
+      (date) => new Date(date) < today
+    );
+
+    if (pastDates.length === 0) {
+      return res.status(200).json({ success: true, message: "No past dates to remove." });
+    }
+
+    // Remove the past dates
+    const updateResult = await UnavailableDate.updateOne(
+      {},
+      { $pull: { dates: { $in: pastDates } } } // Remove only past dates
+    );
+
+    if (updateResult.nModified === 0) {
+      return res.status(404).json({ success: false, message: "No past dates removed. Dates might not exist anymore." });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Past unavailable dates removed successfully",
+      removedDates: pastDates,
+    });
+  } catch (error) {
+    console.error("Error removing past unavailable dates:", error);
+    res.status(500).json({ success: false, message: "Error removing past unavailable dates", error });
+  }
+});
+
+
+// Remove past bookings
+router.post("/admin/remove-past-bookings", auth, async (req, res) => {
+  try {
+    // Get today's date and set time to midnight for accurate comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Ensure time is set to midnight
+    console.log("Today:", today); // Debugging output
+
+    // Fetch past bookings (where the booking date is strictly before today)
+    const pastBookings = await Booking.find({
+      date: { $lt: today }, // Only select bookings with dates before today
+    }).select("_id date");
+
+    console.log("Past Bookings:", pastBookings); // Debugging output
+
+    if (!pastBookings || pastBookings.length === 0) {
+      return res.status(200).json({ success: true, message: "No past bookings to remove." });
+    }
+
+    // Extract the IDs of past bookings to delete
+    const pastBookingIds = pastBookings.map((booking) => booking._id);
+
+    // Delete the past bookings
+    const deleteResult = await Booking.deleteMany({ _id: { $in: pastBookingIds } });
+
+    res.status(200).json({
+      success: true,
+      message: "Past bookings removed successfully.",
+      removedBookings: pastBookings,
+    });
+  } catch (error) {
+    console.error("Error removing past bookings:", error);
+    res.status(500).json({ success: false, message: "Error removing past bookings.", error });
+  }
+});
+
+
+
 
 module.exports = router;
