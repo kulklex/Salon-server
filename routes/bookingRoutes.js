@@ -21,12 +21,12 @@ let transporter = nodemailer.createTransport({
 
 // Function to send the booking confirmation email
 async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDetails) {
-  const { date, time, name, service } = bookingDetails;
+  const { date, time, name, service, extra } = bookingDetails;
 
-  const logoUrl = 'https://yourwebsite.com/logo.png'; // Replace with your logo URL
+  const logoUrl = 'https://lh3.googleusercontent.com/a/ACg8ocK9p43t6YEhik-lF7FCHpkRI3L5gu3Df2G48m0WYVUVaJIcr1o=s80-p'; // Replace with your logo URL
   const customerEmailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-      <div style="background-color: #007bff; color: white; padding: 20px; text-align: center;">
+      <div style="background-color: #0ea2bd; color: white; padding: 20px; text-align: center;">
         <img src="${logoUrl}" alt="Company Logo" style="max-width: 120px; margin-bottom: 10px;" />
         <h1 style="margin: 0; font-size: 24px;">Booking Confirmation</h1>
       </div>
@@ -46,19 +46,23 @@ async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDe
             <td style="padding: 10px; border: 1px solid #ddd;"><strong>Service:</strong></td>
             <td style="padding: 10px; border: 1px solid #ddd;">${service}</td>
           </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Extra Services:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${extra ? extra : 'None'}</td>
+          </tr>
         </table>
         <p style="font-size: 16px; color: #333;">We look forward to serving you. If you have any questions, feel free to contact us.</p>
-        <p style="font-size: 16px; color: #333;">Best regards,<br /><strong>Your Company Name</strong></p>
+        <p style="font-size: 16px; color: #333;">Best regards,<br /><strong>TifeHairHaven</strong></p>
       </div>
-      <div style="background-color: #007bff; color: white; text-align: center; padding: 10px;">
-        <p style="font-size: 14px; margin: 0;">© ${new Date().getFullYear()} Your Company Name. All Rights Reserved.</p>
+      <div style="background-color: #0ea2bd; color: white; text-align: center; padding: 10px;">
+        <p style="font-size: 14px; margin: 0;">© ${new Date().getFullYear()} TifeHairHaven. All Rights Reserved.</p>
       </div>
     </div>
   `;
 
   const adminEmailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-      <div style="background-color: #ff6f61; color: white; padding: 20px; text-align: center;">
+      <div style="background-color: #0ea2bd; color: white; padding: 20px; text-align: center;">
         <h1 style="margin: 0; font-size: 24px;">New Booking Notification</h1>
       </div>
       <div style="padding: 20px; background-color: #f9f9f9;">
@@ -80,11 +84,15 @@ async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDe
             <td style="padding: 10px; border: 1px solid #ddd;"><strong>Service:</strong></td>
             <td style="padding: 10px; border: 1px solid #ddd;">${service}</td>
           </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Extra Services:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${extra ? extra : 'None'}</td>
+          </tr>
         </table>
         <p style="font-size: 16px; color: #333;">Please log in to the booking system for more details.</p>
       </div>
-      <div style="background-color: #ff6f61; color: white; text-align: center; padding: 10px;">
-        <p style="font-size: 14px; margin: 0;">© ${new Date().getFullYear()} Your Company Name. All Rights Reserved.</p>
+      <div style="background-color: #0ea2bd; color: white; text-align: center; padding: 10px;">
+        <p style="font-size: 14px; margin: 0;">© ${new Date().getFullYear()} TifeHairHaven. All Rights Reserved.</p>
       </div>
     </div>
   `;
@@ -108,7 +116,6 @@ async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDe
   try {
     await transporter.sendMail(mailOptions);
     await transporter.sendMail(adminMailOptions);
-    console.log('Booking confirmation email sent.');
   } catch (error) {
     console.error('Error sending booking confirmation email:', error);
   }
@@ -158,6 +165,7 @@ router.post('/create-booking', async (req, res) => {
       time,
       name: customerName,
       service: selectedStyle,
+      extra: bookingNote
     });
       res.status(201).json({ message: 'Booking confirmed', booking: newBooking });
     } catch (error) {
