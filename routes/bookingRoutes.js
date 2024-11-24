@@ -23,7 +23,7 @@ let transporter = nodemailer.createTransport({
 async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDetails) {
   const { date, time, name, service, extra } = bookingDetails;
 
-  const logoUrl = 'https://lh3.googleusercontent.com/a/ACg8ocK9p43t6YEhik-lF7FCHpkRI3L5gu3Df2G48m0WYVUVaJIcr1o=s80-p'; // Replace with your logo URL
+  const logoUrl = 'https://lh3.googleusercontent.com/a/ACg8ocK9p43t6YEhik-lF7FCHpkRI3L5gu3Df2G48m0WYVUVaJIcr1o=s80-p';
   const customerEmailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
       <div style="background-color: #0ea2bd; color: white; padding: 20px; text-align: center;">
@@ -121,7 +121,60 @@ async function sendBookingConfirmationEmail(customerEmail, adminEmail, bookingDe
   }
 }
 
+// Send a message
+router.post('/send-message', async (req, res) => {
+  const { name, email, subject, message } = req.body;
 
+  if (!name || !email || !subject || !message) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+   const customerEmailHtml = `
+   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background-color: #0ea2bd; color: white; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">New Contact Message</h1>
+    </div>
+     <div style="padding: 20px; background-color: #f9f9f9;">
+        <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Name:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Subject:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${subject}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Message:</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${message}</td>
+          </tr>
+        </table>
+      </div>
+     <div style="background-color: #0ea2bd; color: white; text-align: center; padding: 10px;">
+        <p style="font-size: 14px; margin: 0;">© ${new Date().getFullYear()} TifeHairHaven. All Rights Reserved.</p>
+     </div>
+   </div>
+ `;
+
+   const mailOptions = {
+    from: email,
+    to: process.env.ADMIN_EMAIL,
+    subject: `New message from ${name}: ${subject}`,
+    html: customerEmailHtml
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ message: 'There was an error sending your message' });
+  }
+})
 
 // Check Availability
 router.post('/check-availability', async (req, res) => {
