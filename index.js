@@ -2,14 +2,19 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const bookingRoutes = require('./routes/bookingRoutes');
-const userRoutes = require('./routes/userRoutes')
+const userRoutes = require('./routes/userRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 const connectDB  = require('./config/db');
 
 const dotenv = require("dotenv")
 
 // Initialize the Express app
 const app = express();
+
+app.use('/', webhookRoutes)
+
 app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors()); // Enable CORS
 
 
@@ -22,6 +27,7 @@ connectDB();
 // Use the booking routes
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/auth', userRoutes)
+
 
 // Home Route
 app.get('/', (req, res) => {

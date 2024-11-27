@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
+    bookingId: { 
+        type: String, 
+        unique: true
+     },
     date: {
         type: String, 
         required: true
@@ -11,6 +15,10 @@ const bookingSchema = new mongoose.Schema({
     },
     userId: {
         type: String, // Store the userId to identify who booked the slot
+    },
+    customerName: {
+        type: String,
+        required: true,
     },
     customerEmail: {
         type: String,
@@ -26,7 +34,10 @@ const bookingSchema = new mongoose.Schema({
     }, 
     bookingNote: {
         type: String
-    }
+    },
+    isConfirmed: { type: Boolean, default: false },
+    stripeSessionId: { type: String },
+    paymentIntentId: { type: String },
 });
 
 
