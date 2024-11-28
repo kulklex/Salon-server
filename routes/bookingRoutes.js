@@ -81,28 +81,17 @@ router.post("/check-availability", async (req, res) => {
 });
 
 
-// Create a booking
+// Create a booking, Firstly a Stripe Checkout session, webhook will handle saving to DB
 router.post("/create-booking", async (req, res) => {
-  const {
-    date,
-    time,
-    customerName,
-    customerEmail,
-    customerPhone,
-    selectedStyle,
-    bookingNote,
-  } = req.body;
+  const { date, time, customerName, customerEmail, customerPhone, selectedStyle, bookingNote } = req.body;
 
-  // Validate that date and time are provided and not empty
-  if (!date || !time) {
-    return res.status(400).json({ message: "Date and time are required" });
+  const bookingId = `${date}-${time}-${customerEmail}`
+
+  if (!date || !time || !customerName || !customerEmail || !customerPhone || !selectedStyle) {
+    return res.status(400).json({ message: "Please provide all required details." });
   }
 
-  // Create a unique identifier for the booking to prevent duplicate bookings
-  const bookingId = `${date}-${time}-${customerEmail}`;
-
   try {
-    // Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -110,10 +99,10 @@ router.post("/create-booking", async (req, res) => {
           price_data: {
             currency: "gbp",
             product_data: {
-              name: `Booking Deposit for ${selectedStyle}`,
-              description: `Date: ${date}, Time: ${time}`,
+              name: `Deposit for ${selectedStyle}`,
+              description: `Date: ${date} & Time: ${time}`,
             },
-            unit_amount: 1500, // £15
+            unit_amount: 1500, // £15 deposit
           },
           quantity: 1,
         },
@@ -121,41 +110,29 @@ router.post("/create-booking", async (req, res) => {
       mode: "payment",
       success_url: `${process.env.CLIENT_URL}/index.html?status=success`,
       cancel_url: `${process.env.CLIENT_URL}/index.html?status=cancel`,
-      metadata: { bookingId },
+      metadata: {
+        bookingId,
+        date,
+        time,
+        customerName,
+        customerEmail,
+        customerPhone,
+        selectedStyle,
+        bookingNote,
+      },
     });
 
-    const newBooking = new Booking({
-      bookingId,
-      date,
-      time,
-      customerName,
-      customerEmail,
-      customerPhone,
-      selectedStyle,
-      bookingNote,
-      stripeSessionId: session.id,
-      confirmed: false,
-    });
-
-    // Save booking with Stripe session ID
-    newBooking.stripeSessionId = session.id;
-    await newBooking.save();
-
-    res
-      .status(201)
-      .json({
-        message: "Booking confirmed",
-        booking: newBooking,
-        id: session.id,
-      });
+    res.status(200).json({ id: session.id });
   } catch (error) {
     if (error.code === 11000) {
       // Handle duplicate key error gracefully
       return res.status(400).json({ message: "This slot is already booked" });
     }
-    res.status(500).json({ message: "Error creating booking" });
+    console.error("Error creating Stripe session:", error);
+    res.status(500).json({ message: "Error creating Stripe session." });
   }
 });
+
 
 // Set unavailable dates
 router.post("/admin/set-unavailable-dates", auth, async (req, res) => {

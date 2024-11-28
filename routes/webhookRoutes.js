@@ -5,7 +5,7 @@ const nodemailer = require("nodemailer");
 
 require('dotenv').config();
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_TEST_KEY);
 
 // Setup email transporter
 let transporter = nodemailer.createTransport({
@@ -132,8 +132,8 @@ async function sendBookingConfirmationEmail(
 
 
  // Verify Webhook Requests
- router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    const sig = req.headers['stripe-signature'];
+  router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["stripe-signature"];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
   
     let event;
@@ -141,37 +141,58 @@ async function sendBookingConfirmationEmail(
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
     } catch (err) {
-      console.error('Webhook signature verification failed.', err.message);
+      console.error("Webhook signature verification failed:", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
   
-    if (event.type === 'checkout.session.completed') {
+    if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const bookingId = session.metadata.bookingId;
   
-      const booking = await Booking.findOne({ bookingId });
+      // Extract booking details from the metadata
+      const {
+        bookingId,
+        date,
+        time,
+        customerName,
+        customerEmail,
+        customerPhone,
+        selectedStyle,
+        bookingNote,
+      } = session.metadata;
   
-      if (booking && !booking.isConfirmed) {
-        booking.isConfirmed = true;
-        booking.paymentIntentId = session.payment_intent;
-        await booking.save();
-  
-        await sendBookingConfirmationEmail(booking.customerEmail, process.env.ADMIN_EMAIL, {
-          date: booking.date,
-          time: booking.time,
-          name: booking.customerName,
-          service: booking.selectedStyle,
-          extra: booking.bookingNote,
+      try {
+        // Save booking to the database
+        const newBooking = new Booking({
+          bookingId,
+          date,
+          time,
+          customerName,
+          customerEmail,
+          customerPhone,
+          selectedStyle,
+          bookingNote,
+          stripeSessionId: session.id,
+          isConfirmed: true,
         });
+  
+        await newBooking.save();
+  
+        // Send confirmation email
+        await sendBookingConfirmationEmail(customerEmail, process.env.ADMIN_EMAIL, {
+          date,
+          time,
+          name: customerName,
+          service: selectedStyle,
+          extra: bookingNote,
+        });
+  
+        // res.status(201).json({message: "Booking confirmed!"})
+      } catch (error) {
+        console.error("Error saving confirmed booking:", error);
       }
     }
   
     res.json({ received: true });
   });
-  
-  
-
-
-
 
   module.exports = router;
