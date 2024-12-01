@@ -5,7 +5,7 @@ const nodemailer = require("nodemailer");
 
 require('dotenv').config();
 
-const stripe = require('stripe')(process.env.STRIPE_TEST_KEY);
+const stripe = require('stripe')(process.env.STRIPE_WEBHOOK_KEY);
 
 // Setup email transporter
 let transporter = nodemailer.createTransport({
