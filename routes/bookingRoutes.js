@@ -3,7 +3,7 @@ const router = express.Router();
 const Booking = require("../models/bookingModel");
 const auth = require("../middlewares/auth");
 const UnavailableDate = require("../models/UnavailableDates");
-
+const moment = require("moment");
 
 require("dotenv").config();
 
@@ -71,11 +71,56 @@ router.post("/send-message", async (req, res) => {
 router.post("/check-availability", async (req, res) => {
   const { date } = req.body;
 
+     // Define durations for styles
+     const styleDurations = {
+      "Small Box braids": 5,
+      "Medium Box braids": 4,
+      "Big Box braids": 3,
+      "Small Goddess braids": 5,
+      "Medium Goddess braids": 4,
+      "Big Goddess braids": 3,
+      "Small Knotless Braids": 4,
+      "Medium Knotless Braids": 4,
+      "Big Knotless Braids": 4,
+      "Faux Locs": 4,
+      "Starter Locs": 3,
+      "Feed-in Cornrows": 2,
+      "Dread Twist": 2,
+      "Cornrows": 2,
+      "Boys Cornrows": 2,
+      "Stitch cornrows": 2,
+      "Wig Cornrows": 2,
+      "Small Singles Twist": 3,
+      "Medium Singles Twist": 2,
+      "Singles Twist": 2,
+      "Plug Twist": 3,
+      "Barrel twist": 3,
+      "Silk Press": 2,
+      "Deep Conditioning / Hydration Treatment": 2,
+      "Scalp Treatment": 2,
+      "Wash and Go": 2,
+    };
+
   try {
+
     const bookings = await Booking.find({ date });
     const unavailableTimes = bookings.map((booking) => booking.time); // Array of booked times
-    res.json({ unavailableTimes });
+    const unavailableSlots = new Set(); // Use a set to avoid duplicate slots
+
+    // Loop through each booking and mark affected slots
+    bookings.forEach((booking) => {
+      const startTime = moment(booking.time, "hh:mm A"); // Parse time in 12-hour format
+      const duration = styleDurations[booking.selectedStyle] || 1;
+
+      // Add all affected slots based on the duration
+      for (let i = 0; i < duration; i++) {
+        const slot = startTime.clone().add(i, "hours").format("hh:mm A");
+        unavailableSlots.add(slot); // Add the slot to unavailable slots
+      }
+    });
+    res.json({ unavailableTimes, unavailableSlots: Array.from(unavailableSlots) });
   } catch (error) {
+    console.error("Error checking availability: error: ", error)
     res.status(500).json({ message: "Error checking availability" });
   }
 });
@@ -184,7 +229,7 @@ router.get("/admin/get-unavailable-dates", async (req, res) => {
         },
       },
       {
-        $match: { bookedCount: { $gte: 5 } }, // Change 5 to the max time slots per day
+        $match: { bookedCount: { $gte: 8 } }, // Change 8 if max time slots per day is altered
       },
       {
         $project: { date: "$_id", _id: 0 }, // Project the date field for response
@@ -379,5 +424,6 @@ router.post("/admin/remove-past-bookings", auth, async (req, res) => {
       });
   }
 });
+
 
 module.exports = router;
