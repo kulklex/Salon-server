@@ -136,6 +136,18 @@ router.post("/create-booking", async (req, res) => {
     return res.status(400).json({ message: "Please provide all required details." });
   }
 
+  const unavailableDates = await UnavailableDate.findOne({}).select(
+    "dates"
+  )
+
+  // Fetch unavailable dates from UnavailableDate model
+  if (unavailableDates.includes(new Date(date).toISOString())) { 
+    return res.status(400).json({
+      message: "The selected date is unavailable. Please refresh or choose another date.",
+    });
+  }
+
+
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
