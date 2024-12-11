@@ -136,16 +136,16 @@ router.post("/create-booking", async (req, res) => {
     return res.status(400).json({ message: "Please provide all required details." });
   }
 
-  const unavailableDates = await UnavailableDate.findOne({}).select(
-    "dates"
-  )
+  // const unavailableDates = await UnavailableDate.findOne({}).select(
+  //   "dates"
+  // )
 
-  // Fetch unavailable dates from UnavailableDate model
-  if (unavailableDates.includes(new Date(date).toISOString())) { 
-    return res.status(400).json({
-      message: "The selected date is unavailable. Please refresh or choose another date.",
-    });
-  }
+  // // Fetch unavailable dates from UnavailableDate model
+  // if (unavailableDates.includes(new Date(date).toISOString())) { 
+  //   return res.status(400).json({
+  //     message: "The selected date is unavailable. Please refresh or choose another date.",
+  //   });
+  // }
 
 
   try {
