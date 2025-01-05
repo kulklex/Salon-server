@@ -24,7 +24,7 @@ async function sendBookingConfirmationEmail(
     adminEmail,
     bookingDetails
   ) {
-    const { date, time, name, service, extra } = bookingDetails;
+    const { date, time, name, service, email, phone, extra } = bookingDetails;
   
     const logoUrl =
       "https://lh3.googleusercontent.com/a/ACg8ocK9p43t6YEhik-lF7FCHpkRI3L5gu3Df2G48m0WYVUVaJIcr1o=s80-p";
@@ -90,6 +90,14 @@ async function sendBookingConfirmationEmail(
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Service:</strong></td>
               <td style="padding: 10px; border: 1px solid #ddd;">${service}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Email:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${email}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;"><strong>~Phone:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${phone}</td>
             </tr>
             <tr>
               <td style="padding: 10px; border: 1px solid #ddd;"><strong>Extra Services:</strong></td>
@@ -183,6 +191,8 @@ async function sendBookingConfirmationEmail(
           time,
           name: customerName,
           service: selectedStyle,
+          email: customerEmail,
+          phone: customerPhone,
           extra: bookingNote,
         });
   
