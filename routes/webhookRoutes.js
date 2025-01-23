@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Booking = require('../models/bookingModel');
 const nodemailer = require("nodemailer");
+const { addBookingToCalendar } = require('../middlewares/googleCalendar');
 
 require('dotenv').config();
 
@@ -195,8 +196,17 @@ async function sendBookingConfirmationEmail(
           phone: customerPhone,
           extra: bookingNote,
         });
-  
-        // res.status(201).json({message: "Booking confirmed!"})
+        
+      // Add to Google Calendar
+      await addBookingToCalendar({
+        date,
+        time,
+        customerName,
+        selectedStyle,
+        customerEmail,
+        customerPhone,
+        bookingNote,
+      });
       } catch (error) {
         console.error("Error saving confirmed booking:", error);
       }
