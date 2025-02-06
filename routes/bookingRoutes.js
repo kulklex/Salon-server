@@ -107,6 +107,10 @@ router.post("/check-availability", async (req, res) => {
     const unavailableTimes = bookings.map((booking) => booking.time); // Array of booked times
     const unavailableSlots = new Set(); // Use a set to avoid duplicate slots
 
+     // Get today's date and current time
+     const currentDate = moment().format("YYYY-MM-DD");
+     const currentTime = moment();
+
     // Loop through each booking and mark affected slots
     bookings.forEach((booking) => {
       const startTime = moment(booking.time, "hh:mm A"); // Parse time in 12-hour format
@@ -118,6 +122,28 @@ router.post("/check-availability", async (req, res) => {
         unavailableSlots.add(slot); // Add the slot to unavailable slots
       }
     });
+
+    // Mark past time slots for the current day as unavailable
+    if (date === currentDate) {
+      const timeSlots = [
+        "10:00 AM",
+        "11:00 AM",
+        "12:00 PM",
+        "01:00 PM",
+        "02:00 PM",
+        "03:00 PM",
+        "04:00 PM",
+        "05:00 PM",
+      ];
+
+      timeSlots.forEach((slot) => {
+        const slotTime = moment(slot, "hh:mm A");
+        if (slotTime.isBefore(currentTime)) {
+          unavailableSlots.add(slot); // Add passed times to unavailable slots
+        }
+      });
+    }
+    
     res.json({ unavailableTimes, unavailableSlots: Array.from(unavailableSlots) });
   } catch (error) {
     console.error("Error checking availability: error: ", error)
