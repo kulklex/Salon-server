@@ -198,15 +198,15 @@ async function sendBookingConfirmationEmail(
         });
         
       // Add to Google Calendar
-      await addBookingToCalendar({
-        date,
-        time,
-        customerName,
-        selectedStyle,
-        customerEmail,
-        customerPhone,
-        bookingNote,
-      });
+      // await addBookingToCalendar({
+      //   date,
+      //   time,
+      //   customerName,
+      //   selectedStyle,
+      //   customerEmail,
+      //   customerPhone,
+      //   bookingNote,
+      // });
       } catch (error) {
         console.error("Error saving confirmed booking:", error);
       }
