@@ -37,7 +37,7 @@ const bookingSchema = new mongoose.Schema({
     isConfirmed: { type: Boolean, default: false },
     stripeSessionId: { type: String },
     paymentIntentId: { type: String },
-});
+},  { timestamps: true });
 
 
 const Booking = mongoose.model('Booking', bookingSchema);

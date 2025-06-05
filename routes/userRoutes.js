@@ -143,7 +143,7 @@ router.post("/google-login", async (req, res) => {
 router.get("/user-bookings", async (req, res) => {
   try {
     // Find bookings for this user
-    const bookings = await Booking.find().sort({createdAt: -1});
+    const bookings = await Booking.find().sort({ _id: -1 });
 
     if (!bookings) {
       return res
