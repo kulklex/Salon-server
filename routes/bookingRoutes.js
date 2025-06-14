@@ -9,7 +9,6 @@ require("dotenv").config();
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-
 // Send a message
 router.post("/send-message", async (req, res) => {
   const { name, email, subject, message } = req.body;
@@ -71,45 +70,44 @@ router.post("/send-message", async (req, res) => {
 router.post("/check-availability", async (req, res) => {
   const { date } = req.body;
 
-     // Define durations for styles
-     const styleDurations = {
-      "Small Box braids": 5,
-      "Medium Box braids": 4,
-      "Big Box braids": 3,
-      "Small Goddess braids": 5,
-      "Medium Goddess braids": 4,
-      "Big Goddess braids": 3,
-      "Small Knotless Braids": 4,
-      "Medium Knotless Braids": 4,
-      "Big Knotless Braids": 4,
-      "Faux Locs": 4,
-      "Starter Locs": 3,
-      "Feed-in Cornrows": 2,
-      "Dread Twist": 2,
-      "Cornrows": 2,
-      "Boys Cornrows": 2,
-      "Stitch cornrows": 2,
-      "Wig Cornrows": 2,
-      "Small Singles Twist": 3,
-      "Medium Singles Twist": 2,
-      "Singles Twist": 2,
-      "Plug Twist": 3,
-      "Barrel twist": 3,
-      "Silk Press": 2,
-      "Deep Conditioning / Hydration Treatment": 2,
-      "Scalp Treatment": 2,
-      "Wash and Go": 2,
-    };
+  // Define durations for styles
+  const styleDurations = {
+    "Small Box braids": 5,
+    "Medium Box braids": 4,
+    "Big Box braids": 3,
+    "Small Goddess braids": 5,
+    "Medium Goddess braids": 4,
+    "Big Goddess braids": 3,
+    "Small Knotless Braids": 4,
+    "Medium Knotless Braids": 4,
+    "Big Knotless Braids": 4,
+    "Faux Locs": 4,
+    "Starter Locs": 3,
+    "Feed-in Cornrows": 2,
+    "Dread Twist": 2,
+    Cornrows: 2,
+    "Boys Cornrows": 2,
+    "Stitch cornrows": 2,
+    "Wig Cornrows": 2,
+    "Small Singles Twist": 3,
+    "Medium Singles Twist": 2,
+    "Singles Twist": 2,
+    "Plug Twist": 3,
+    "Barrel twist": 3,
+    "Silk Press": 2,
+    "Deep Conditioning / Hydration Treatment": 2,
+    "Scalp Treatment": 2,
+    "Wash and Go": 2,
+  };
 
   try {
-
     const bookings = await Booking.find({ date });
     const unavailableTimes = bookings.map((booking) => booking.time); // Array of booked times
     const unavailableSlots = new Set(); // Use a set to avoid duplicate slots
 
-     // Get today's date and current time
-     const currentDate = moment().format("YYYY-MM-DD");
-     const currentTime = moment();
+    // Get today's date and current time
+    const currentDate = moment().format("YYYY-MM-DD");
+    const currentTime = moment();
 
     // Loop through each booking and mark affected slots
     bookings.forEach((booking) => {
@@ -143,38 +141,53 @@ router.post("/check-availability", async (req, res) => {
         }
       });
     }
-    
-    res.json({ unavailableTimes, unavailableSlots: Array.from(unavailableSlots) });
+
+    res.json({
+      unavailableTimes,
+      unavailableSlots: Array.from(unavailableSlots),
+    });
   } catch (error) {
-    console.error("Error checking availability: error: ", error)
+    console.error("Error checking availability: error: ", error);
     res.status(500).json({ message: "Error checking availability" });
   }
 });
 
-
 // Create a booking, Firstly a Stripe Checkout session, webhook will handle saving to DB
 router.post("/create-booking", async (req, res) => {
-  const { date, time, customerName, customerEmail, customerPhone, selectedStyle, bookingNote } = req.body;
+  const {
+    date,
+    time,
+    customerName,
+    customerEmail,
+    customerPhone,
+    selectedStyle,
+    bookingNote,
+  } = req.body;
 
-  const bookingId = `${date}-${time}-${customerEmail}`
+  const bookingId = `${date}-${time}-${customerEmail}`;
 
   if (!date || !time || !customerName || !customerEmail || !customerPhone || !selectedStyle) {
-    return res.status(400).json({ message: "Please provide all required details." });
+    return res
+      .status(400)
+      .json({ message: "Please provide all required details." });
   }
 
-  // const unavailableDates = await UnavailableDate.findOne({}).select(
-  //   "dates"
-  // )
-
-  // // Fetch unavailable dates from UnavailableDate model
-  // if (unavailableDates.includes(new Date(date).toISOString())) { 
-  //   return res.status(400).json({
-  //     message: "The selected date is unavailable. Please refresh or choose another date.",
-  //   });
-  // }
-
-
   try {
+    // Check if date is unavailable
+    const unavailableDatesDoc = await UnavailableDate.findOne({});
+    const unavailableDates = unavailableDatesDoc?.dates || [];
+
+    const selectedDate = new Date(date);
+    const isDateUnavailable = unavailableDates.some(
+      (e) => new Date(e).toDateString() === selectedDate.toDateString()
+    );
+
+    if (isDateUnavailable) {
+      return res
+        .status(400)
+        .json({ message: "Selected date is unavailable for booking." });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -216,7 +229,6 @@ router.post("/create-booking", async (req, res) => {
   }
 });
 
-
 // Set unavailable dates
 router.post("/admin/set-unavailable-dates", auth, async (req, res) => {
   try {
@@ -229,21 +241,17 @@ router.post("/admin/set-unavailable-dates", auth, async (req, res) => {
       { upsert: true } // Create the document if it doesn't exist
     );
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Dates set as unavailable",
-        data: updatedUnavailableDates,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Dates set as unavailable",
+      data: updatedUnavailableDates,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error setting unavailable dates",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error setting unavailable dates",
+      error,
+    });
   }
 });
 
@@ -284,13 +292,11 @@ router.get("/admin/get-unavailable-dates", async (req, res) => {
 
     res.status(200).json({ success: true, dates: allUnavailableDates });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error fetching unavailable dates",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error fetching unavailable dates",
+      error,
+    });
   }
 });
 
@@ -304,25 +310,21 @@ router.post("/admin/remove-unavailable-date", auth, async (req, res) => {
     );
 
     if (updateResult.nModified === 0) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Date not found in unavailable list",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Date not found in unavailable list",
+      });
     }
 
     res
       .status(200)
       .json({ success: true, message: "Date removed from unavailable list" });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error removing unavailable date",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error removing unavailable date",
+      error,
+    });
   }
 });
 
@@ -335,12 +337,10 @@ router.delete("/admin/delete-booking/:id", async (req, res) => {
     const booking = await Booking.findOne({ _id: bookingId });
 
     if (!booking) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Booking not found or access denied",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found or access denied",
+      });
     }
 
     await Booking.deleteOne({ _id: bookingId });
@@ -392,12 +392,10 @@ router.post("/admin/remove-past-unavailable-dates", auth, async (req, res) => {
     );
 
     if (updateResult.nModified === 0) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "No past dates removed. Dates might not exist anymore.",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "No past dates removed. Dates might not exist anymore.",
+      });
     }
 
     res.status(200).json({
@@ -407,13 +405,11 @@ router.post("/admin/remove-past-unavailable-dates", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("Error removing past unavailable dates:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error removing past unavailable dates",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error removing past unavailable dates",
+      error,
+    });
   }
 });
 
@@ -453,15 +449,12 @@ router.post("/admin/remove-past-bookings", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("Error removing past bookings:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error removing past bookings.",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error removing past bookings.",
+      error,
+    });
   }
 });
-
 
 module.exports = router;
