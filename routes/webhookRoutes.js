@@ -1,35 +1,25 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Booking = require('../models/bookingModel');
-const nodemailer = require("nodemailer");
-const { addBookingToCalendar } = require('../middlewares/googleCalendar');
+const Booking = require("../models/bookingModel");
+const UnavailableDate = require("../models/UnavailableDates");
+const { addBookingToCalendar } = require("../middlewares/googleCalendar");
+const { transporter } = require("../utils/transporter");
 
-require('dotenv').config();
+require("dotenv").config();
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-// Setup email transporter
-let transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: "587",
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Function to send the booking confirmation email
 async function sendBookingConfirmationEmail(
-    customerEmail,
-    adminEmail,
-    bookingDetails
-  ) {
-    const { date, time, name, service, email, phone, extra } = bookingDetails;
-  
-    const logoUrl =
-      "https://lh3.googleusercontent.com/a/ACg8ocK9p43t6YEhik-lF7FCHpkRI3L5gu3Df2G48m0WYVUVaJIcr1o=s80-p";
-    const customerEmailHtml = `
+  customerEmail,
+  adminEmail,
+  bookingDetails
+) {
+  const { date, time, name, service, email, phone, extra } = bookingDetails;
+
+  const logoUrl =
+    "https://lh3.googleusercontent.com/a/ACg8ocK9p43t6YEhik-lF7FCHpkRI3L5gu3Df2G48m0WYVUVaJIcr1o=s80-p";
+  const customerEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #0ea2bd; color: white; padding: 20px; text-align: center;">
           <img src="${logoUrl}" alt="Company Logo" style="max-width: 120px; margin-bottom: 10px;" />
@@ -67,8 +57,8 @@ async function sendBookingConfirmationEmail(
         </div>
       </div>
     `;
-  
-    const adminEmailHtml = `
+
+  const adminEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #0ea2bd; color: white; padding: 20px; text-align: center;">
           <h1 style="margin: 0; font-size: 24px;">New Booking Notification</h1>
@@ -114,49 +104,51 @@ async function sendBookingConfirmationEmail(
         </div>
       </div>
     `;
-  
-    // Email to the customer
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: customerEmail,
-      subject: "Booking Confirmation",
-      html: customerEmailHtml,
-    };
-  
-    // Email to the admin
-    const adminMailOptions = {
-      from: process.env.EMAIL_USER,
-      to: adminEmail,
-      subject: "New Booking Notification",
-      html: adminEmailHtml,
-    };
-  
-    try {
-      await transporter.sendMail(mailOptions);
-      await transporter.sendMail(adminMailOptions);
-    } catch (error) {
-      console.error("Error sending booking confirmation email:", error);
-    }
+
+  // Email to the customer
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: customerEmail,
+    subject: "Booking Confirmation",
+    html: customerEmailHtml,
+  };
+
+  // Email to the admin
+  const adminMailOptions = {
+    from: process.env.EMAIL_USER,
+    to: adminEmail,
+    subject: "New Booking Notification",
+    html: adminEmailHtml,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    await transporter.sendMail(adminMailOptions);
+  } catch (error) {
+    console.error("Error sending booking confirmation email:", error);
   }
+}
 
-
- // Verify Webhook Requests
-  router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+// Verify Webhook Requests
+router.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
     const sig = req.headers["stripe-signature"];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  
+
     let event;
-  
+
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
     } catch (err) {
       console.error("Webhook signature verification failed:", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-  
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-  
+
       // Extract booking details from the metadata
       const {
         bookingId,
@@ -168,8 +160,25 @@ async function sendBookingConfirmationEmail(
         selectedStyle,
         bookingNote,
       } = session.metadata;
-  
+
       try {
+        // Recheck if slot is still available
+        const normalizeDate = (input) =>
+          new Date(input).toISOString().split("T")[0];
+        const normalizedChosenDate = normalizeDate(date);
+        const unavailableDatesDoc = await UnavailableDate.findOne({});
+        const unavailableDates = unavailableDatesDoc?.dates || [];
+
+        const isDateUnavailable = unavailableDates.some(
+          (e) => normalizeDate(e) === normalizedChosenDate
+        );
+
+        if (isDateUnavailable) {
+          return res
+            .status(400)
+            .json({ message: "Selected date is unavailable for booking." });
+        }
+
         // Save booking to the database
         const newBooking = new Booking({
           bookingId,
@@ -183,36 +192,41 @@ async function sendBookingConfirmationEmail(
           stripeSessionId: session.id,
           isConfirmed: true,
         });
-  
+
         await newBooking.save();
-  
+
         // Send confirmation email
-        await sendBookingConfirmationEmail(customerEmail, process.env.ADMIN_EMAIL, {
-          date,
-          time,
-          name: customerName,
-          service: selectedStyle,
-          email: customerEmail,
-          phone: customerPhone,
-          extra: bookingNote,
-        });
-        
-      // Add to Google Calendar
-      // await addBookingToCalendar({
-      //   date,
-      //   time,
-      //   customerName,
-      //   selectedStyle,
-      //   customerEmail,
-      //   customerPhone,
-      //   bookingNote,
-      // });
+        await sendBookingConfirmationEmail(
+          customerEmail,
+          process.env.ADMIN_EMAIL,
+          {
+            date,
+            time,
+            name: customerName,
+            service: selectedStyle,
+            email: customerEmail,
+            phone: customerPhone,
+            extra: bookingNote,
+          }
+        );
+
+        // Add to Google Calendar
+        // await addBookingToCalendar({
+        //   date,
+        //   time,
+        //   customerName,
+        //   selectedStyle,
+        //   customerEmail,
+        //   customerPhone,
+        //   bookingNote,
+        // });
       } catch (error) {
         console.error("Error saving confirmed booking:", error);
       }
     }
-  
-    res.json({ received: true });
-  });
 
-  module.exports = router;
+    res.json({ received: true });
+  }
+);
+
+module.exports = router;

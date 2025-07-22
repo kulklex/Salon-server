@@ -4,6 +4,7 @@ const Booking = require("../models/bookingModel");
 const auth = require("../middlewares/auth");
 const UnavailableDate = require("../models/UnavailableDates");
 const moment = require("moment");
+const { transporter } = require("../utils/transporter");
 
 require("dotenv").config();
 
@@ -174,12 +175,13 @@ router.post("/create-booking", async (req, res) => {
 
   try {
     // Check if date is unavailable
+    const normalizeDate = (input) => new Date(input).toISOString().split("T")[0];
+    const normalizedChosenDate = normalizeDate(date);
     const unavailableDatesDoc = await UnavailableDate.findOne({});
     const unavailableDates = unavailableDatesDoc?.dates || [];
 
-    const selectedDate = new Date(date);
     const isDateUnavailable = unavailableDates.some(
-      (e) => new Date(e).toDateString() === selectedDate.toDateString()
+      (e) => normalizeDate(e) === normalizedChosenDate
     );
 
     if (isDateUnavailable) {
@@ -187,6 +189,12 @@ router.post("/create-booking", async (req, res) => {
         .status(400)
         .json({ message: "Selected date is unavailable for booking." });
     }
+
+     // Check if time slot already booked
+    // const existing = await Booking.findOne({ date, time });
+    // if (existing) {
+    //   return res.status(400).json({ message: "Time slot already booked." });
+    // }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
