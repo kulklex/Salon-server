@@ -1,11 +1,19 @@
+require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const Booking = require("../models/bookingModel");
 const UnavailableDate = require("../models/UnavailableDates");
+const nodemailer = require("nodemailer")
 const { addBookingToCalendar } = require("../middlewares/googleCalendar");
-const { transporter } = require("../utils/transporter");
 
-require("dotenv").config();
+let transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
@@ -128,6 +136,7 @@ async function sendBookingConfirmationEmail(
     console.error("Error sending booking confirmation email:", error);
   }
 }
+
 
 // Verify Webhook Requests
 router.post(

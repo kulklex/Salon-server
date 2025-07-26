@@ -1,12 +1,20 @@
+require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const Booking = require("../models/bookingModel");
 const auth = require("../middlewares/auth");
 const UnavailableDate = require("../models/UnavailableDates");
 const moment = require("moment");
-const { transporter } = require("../utils/transporter");
+const nodemailer = require("nodemailer");
 
-require("dotenv").config();
+
+let transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
@@ -190,11 +198,11 @@ router.post("/create-booking", async (req, res) => {
         .json({ message: "Selected date is unavailable for booking." });
     }
 
-     // Check if time slot already booked
-    // const existing = await Booking.findOne({ date, time });
-    // if (existing) {
-    //   return res.status(400).json({ message: "Time slot already booked." });
-    // }
+   // Check if time slot already booked
+    const existing = await Booking.findOne({ date, time });
+    if (existing) {
+      return res.status(400).json({ message: "Time slot already booked." });
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],

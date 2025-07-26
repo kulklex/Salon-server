@@ -11,10 +11,11 @@ const dotenv = require("dotenv")
 // Initialize the Express app
 const app = express();
 
-app.use('/', webhookRoutes)
 
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use('/', webhookRoutes)
 app.use(cors()); // Enable CORS
 
 
@@ -24,7 +25,9 @@ dotenv.config()
 // Connect to MongoDB
 connectDB();
 
+
 // Use the booking routes
+
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/auth', userRoutes)
 
