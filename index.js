@@ -12,10 +12,13 @@ const dotenv = require("dotenv")
 const app = express();
 
 
+// Stripe needs raw body → mount webhook route FIRST
+app.use('/', webhookRoutes)
+
+
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/', webhookRoutes)
 app.use(cors()); // Enable CORS
 
 
